@@ -1,0 +1,7 @@
+###### Requirements  ######
+
+bcrypt
+PyJWT
+uvicorn
+SQLAlchemy
+fastapi
