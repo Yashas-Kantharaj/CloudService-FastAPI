@@ -48,7 +48,7 @@ async def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
 
 @app.post("/permissions", status_code=status.HTTP_201_CREATED)
 async def addPermission(permission: schemas.Permission, db: Session = Depends(get_db), token_data: auth.TokenPayload = Depends(auth.check_user_role)):
-    if token_data.sub != "admin":
+    if token_data.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to access this resource")
 
     newPermission = db.query(models.Permission).filter(models.Permission.name == permission.name).first()
@@ -64,23 +64,25 @@ async def addPermission(permission: schemas.Permission, db: Session = Depends(ge
     
 @app.patch("/permissions/{perId}")
 async def updatePermission(perId: int, permission: schemas.Permission, db: Session = Depends(get_db), token_data: auth.TokenPayload = Depends(auth.check_user_role)):
-    if token_data.sub != "admin":
+    if token_data.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to access this resource")
     
-    permission = db.query(models.Permission).filter(models.Permission.id == perId).first()
+    selectedPermission = db.query(models.Permission).filter(models.Permission.id == perId).first()
 
-    if permission:
-        updatedPermission =  permission(name=permission.name, endpoint=permission.endpoint, desc=permission.desc)
-        db.add(updatedPermission)
+    if selectedPermission:
+        selectedPermission.name = permission.name
+        selectedPermission.endpoint = permission.endpoint
+        selectedPermission.desc = permission.desc
+        db.add(selectedPermission)
         db.commit()
-        db.refresh(updatedPermission)
-        return updatedPermission
+        db.refresh(selectedPermission)
+        return selectedPermission
     else:
         raise HTTPException(status_code=400, detail="Permission doesn't exists!")
     
 @app.delete("/permissions/{perId}")
 async def deletePermission(perId: int, db: Session = Depends(get_db), token_data: auth.TokenPayload = Depends(auth.check_user_role)):
-    if token_data.sub != "admin":
+    if token_data.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to access this resource")
     
     permission = db.query(models.Permission).filter(models.Permission.id == perId).first()
@@ -94,7 +96,7 @@ async def deletePermission(perId: int, db: Session = Depends(get_db), token_data
     
 @app.post("/plan", status_code=status.HTTP_201_CREATED)
 async def addPlan(plan: schemas.Plans, db: Session = Depends(get_db), token_data: auth.TokenPayload = Depends(auth.check_user_role)):
-    if token_data.sub != "admin":
+    if token_data.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to access this resource")
     
     newPlan = db.query(models.Plan).filter(models.Plan.name == plan.name).first()
@@ -110,23 +112,26 @@ async def addPlan(plan: schemas.Plans, db: Session = Depends(get_db), token_data
     
 @app.patch("/plan/{planId}")
 async def updatePlan(planId: int, plan: schemas.Plans, db: Session = Depends(get_db), token_data: auth.TokenPayload = Depends(auth.check_user_role)):
-    if token_data.sub != "admin":
+    if token_data.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to access this resource")
     
     newPlan = db.query(models.Plan).filter(models.Plan.id == planId).first()
 
     if newPlan:
-        new_Plan =  newPlan(name=plan.name, desc=plan.desc, apiPermission=plan.apiPermission, limit=plan.limit)
-        db.add(new_Plan)
+        newPlan.name=plan.name 
+        newPlan.desc=plan.desc
+        newPlan.apiPermission=plan.apiPermission
+        newPlan.limit=plan.limit
+        db.add(newPlan)
         db.commit()
-        db.refresh(new_Plan)
-        return new_Plan
+        db.refresh(newPlan)
+        return newPlan
     else:
         raise HTTPException(status_code=400, detail="Plan doesn't exists!")
     
 @app.delete("/plan/{planId}")
 async def deletePlan(planId: int, db: Session = Depends(get_db), token_data: auth.TokenPayload = Depends(auth.check_user_role)):
-    if token_data.sub != "admin":
+    if token_data.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to access this resource")
     
     newPlan = db.query(models.Plan).filter(models.Plan.id == planId).first()
@@ -170,17 +175,18 @@ async def getSubscriptions(userId: int, db: Session = Depends(get_db), token_dat
 # Update user's subscriptions details
 @app.patch("/subscriptions/{userId}")
 async def updateSubscriptions(userId: int, subscriptions: schemas.SubscriptionTracker, db: Session = Depends(get_db), token_data: auth.TokenPayload = Depends(auth.check_user_role)):
-    if token_data.sub != "admin":
+    if token_data.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to access this resource")
     
     updateSubscription = db.query(models.SubscriptionTracker).filter(models.SubscriptionTracker.userId == userId).first()
 
     if updateSubscription:
-        new_Subscription =  updateSubscription(userId=subscriptions.userId, planId=subscriptions.planId)
-        db.add(new_Subscription)
+        updateSubscription.userId=subscriptions.userId
+        updateSubscription.planId=subscriptions.planId
+        db.add(updateSubscription)
         db.commit()
-        db.refresh(new_Subscription)
-        return new_Subscription
+        db.refresh(updateSubscription)
+        return updateSubscription
     else:
         raise HTTPException(status_code=400, detail="Subscriptions doesn't exists for the user!")
     
@@ -209,7 +215,7 @@ async def accessControl(userId: int, db: Session = Depends(get_db), token_data: 
     
     if sub and plan:
         return {"plan" : plan,
-                "permission" : plan.id}
+                "permission" : plan.apiPermission}
     else:
         raise HTTPException(status_code=400, detail="User is not subscribed to any plan")
 
